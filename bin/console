@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+
+require 'bundler/setup'
+require 'slack_alarm'
+
+def reload!
+  puts 'Reloading ...'
+  root_dir    = File.expand_path('..', __dir__)
+  reload_dirs = %w[lib]
+  Object.send(:remove_const, :SlackAlarm)
+
+  reload_dirs.each do |dir|
+    Dir.glob("#{root_dir}/#{dir}/**/initializers/**/*.rb").sort.each { |f| load(f) }
+    Dir.glob("#{root_dir}/#{dir}/**/*.rb").sort.each { |f| load(f) }
+  end
+  true
+end
+
+begin
+  require 'pry'
+  Pry.start
+rescue LoadError
+  require 'irb'
+  IRB.start(__FILE__)
+end
