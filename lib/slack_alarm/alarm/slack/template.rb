@@ -14,14 +14,12 @@ module Alarm
       def template_block(opts)
         setup_options(opts)
         output = []
-        output << el_description(opts)
-        output << el_context(opts) if opts[:context]
-        output << el_divider if opts[:context]
-        output << el_cmd(opts) if opts[:cmd]
-        output << el_started(opts)
-        output << el_duration_n_memory(opts)
-        output << el_hostname(opts)
-        output << el_ruby_version(opts)
+        add_el_header(output, opts[:header])
+        add_el_started_n_duration(output, opts)
+        add_el_body(output, opts[:body])
+        add_el_footer(output, opts[:footer])
+
+        output
       end
 
       def template_attachment(opts)
@@ -39,6 +37,20 @@ module Alarm
       private
 
       include Alarm::Slack::Helper
+
+      def el_divider
+        {
+          type: 'divider'
+        }
+      end
+
+      def add_el_header(output, opts_header)
+        output << el_description(opts_header)
+        return output if opts_header[:context].nil?
+
+        output << el_context(opts_header)
+        output << el_divider
+      end
 
       def el_description(opts)
         {
@@ -62,66 +74,71 @@ module Alarm
         }
       end
 
-      def el_divider
-        {
-          type: 'divider'
-        }
-      end
+      def add_el_started_n_duration(output, opts)
+        el = { type: 'section' }
 
-      def el_cmd(opts)
-        {
-          type: 'section',
-          text: {
+        fields = %i[started current_time].map do |key|
+          {
             type: 'mrkdwn',
-            text: "*Command:*\n #{hightlight(opts[:cmd])} (#{opts[:env] || 'development'})"
+            text: "*#{key.to_s.capitalize}:*\n#{opts[key]}"
           }
-        }
+        end
+
+        el.merge(fields: fields)
+        output << el
       end
 
-      def el_started(opts)
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: "*Started:*\n#{opts[:current_time]}"
-          }
-        }
+      def add_el_body(output, opts_body)
+        opts_body.each do |sections|
+          if sections.length > 1
+            add_group_sections(output, sections)
+          else
+            add_single_section(output, sections.first)
+          end
+        end
       end
 
-      def el_duration_n_memory(opts)
-        {
-          type: 'section',
-          fields: [
-            {
+      def add_single_section(output, section)
+        return if blank?(section)
+
+        section.each do |key, value|
+          output << {
+            type: 'section',
+            text: {
               type: 'mrkdwn',
-              text: "*Duration:*\n#{opts[:duration]}"
-            },
-            {
-              type: 'mrkdwn',
-              text: "*Memory:*\n#{opts[:memory]}"
+              text: "*#{key}:*\n #{value})"
             }
-          ]
-        }
+          }
+        end
       end
 
-      def el_hostname(opts)
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: "*Hostname:*\n#{opts[:hostname]}"
+      def add_group_sections(output, sections)
+        return if blank?(sections)
+
+        sections.each_slice(2) do |fields|
+          fields_content = []
+          fields.each do |field|
+            field.each do |key, value|
+              fields_content << {
+                type: 'mrkdwn',
+                text: "*#{key.capitalize}:*\n#{value}"
+              }
+            end
+          end
+          output << {
+            type: 'section',
+            fields: fields_content
           }
-        }
+        end
       end
 
-      def el_ruby_version(opts)
-        {
-          type: 'section',
-          text: {
-            type: 'mrkdwn',
-            text: "*Version:*\n#{opts[:ruby_version]}"
-          }
-        }
+      def add_el_footer(output, opts_footer)
+        return if blank?(opts_footer)
+
+        output << el_divider
+        opts_footer.each do |section|
+          add_single_section(output, section)
+        end
       end
     end
   end
