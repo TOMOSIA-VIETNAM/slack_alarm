@@ -7,7 +7,7 @@ _A simple wrapper to monitoring your project and pushing notifications to Slack.
 Add this line to your application's Gemfile:
 
 ```ruby
-gem 'slack_alarm', git: 'git@github.com:TOMOSIA-VIETNAM/slack_alarm.git'
+gem 'slack_alarm', git: 'git@github.com:TOMOSIA-VIETNAM/slack_alarm.git', branch: 'main'
 ```
 
 And then execute:
